@@ -268,7 +268,7 @@ app.get("/test", (req, res) => {
     대화는 이 페이지를 새로고침하면 사라집니다.
   </p>
   <form id="form">
-    <label for="password">테스트 비밀번호 — API 키가 아닙니다</label>
+    <label for="password">테스트 비밀번호 - 크레딧 충전해야 AI가 답해줘요 공짜는 없어요</label>
     <input id="password" type="password" autocomplete="off" required>
     <div id="chat" role="log" aria-live="polite"></div>
     <label for="message">메시지</label>
