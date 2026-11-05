@@ -273,7 +273,7 @@ app.get("/test", (req, res) => {
     <div id="chat" role="log" aria-live="polite"></div>
     <label for="message">메시지</label>
     <textarea id="message" maxlength="1000" required
-      placeholder="퇴근 후 30분 정도 쉬고 싶어요."></textarea>
+      placeholder="메시지를 입력하세요.">퇴근 후 30분 정도 쉬고 싶어요</textarea>
     <button id="send" type="submit">AI에게 보내기</button>
   </form>
   <p id="status" role="status"></p>
