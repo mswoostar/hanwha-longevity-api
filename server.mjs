@@ -176,9 +176,19 @@ app.post("/api/concierge", async (req, res) => {
       }
     );
 
-    const data = await upstream.json();
+    const data = await upstream.json().catch(() => ({}));
 
     if (!upstream.ok) {
+      // Only status/code/type are read from the upstream error. The message text and
+      // request content are never logged or returned (they could contain sensitive data).
+      const upstreamError = data?.error || {};
+      const info = {
+        status: upstream.status,
+        code: upstreamError.code ?? null,
+        type: upstreamError.type ?? null
+      };
+      console.error("[openai-error]", JSON.stringify(info));
+
       let error = "AI 요청을 처리하지 못했습니다.";
 
       if (upstream.status === 401) {
@@ -187,14 +197,20 @@ app.post("/api/concierge", async (req, res) => {
         error = "API 키의 모델 요청 권한을 확인해주세요.";
       } else if (upstream.status === 404) {
         error = "선택한 AI 모델의 사용 가능 여부를 확인해주세요.";
+      } else if (upstream.status === 400) {
+        error = "AI 요청 형식 또는 모델 설정을 확인해주세요.";
       } else if (upstream.status === 429) {
-        error =
-          data.error?.code === "insufficient_quota"
-            ? "OpenAI API 크레딧 또는 결제 설정을 확인해주세요."
-            : "AI 요청 한도에 도달했습니다. 잠시 후 다시 시도해주세요.";
+        const isQuota =
+          upstreamError.code === "insufficient_quota" ||
+          upstreamError.type === "insufficient_quota";
+        error = isQuota
+          ? "OpenAI API 크레딧 또는 결제 설정을 확인해주세요."
+          : upstreamError.code === "rate_limit_exceeded"
+            ? "OpenAI 분당 요청 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+            : "OpenAI 사용 한도 오류입니다. 아래 오류 코드로 원인을 확인해주세요.";
       }
 
-      return res.status(502).json({ error });
+      return res.status(502).json({ error, upstream: info });
     }
 
     const reply = (data.output || [])
@@ -317,7 +333,13 @@ app.get("/test", (req, res) => {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "요청 실패");
+      if (!response.ok) {
+        const u = data.upstream;
+        throw new Error(
+          (data.error || "요청 실패") +
+            (u ? " [상태 " + u.status + " · 코드 " + u.code + " · 유형 " + u.type + "]" : "")
+        );
+      }
 
       bubble("나", text);
       bubble("AI", data.reply);
